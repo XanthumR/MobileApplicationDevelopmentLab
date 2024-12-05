@@ -1,9 +1,11 @@
 package msku.ceng.madlab.week9;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.StrictMode;
@@ -17,9 +19,6 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
@@ -57,10 +56,19 @@ public class MainActivity extends AppCompatActivity {
                 if (permisssion != PackageManager.PERMISSION_GRANTED){
                     ActivityCompat.requestPermissions(MainActivity.this, PERMISSSON_STORAGE , REQUEST_EXTERNAL_STORAGE);
                 }
-                String fileName = "temp.jpg";
-                String imagePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString()+"/"+fileName;
-                downloadFile(txturl.getText().toString(),imagePath);
-                preview(imagePath);
+//                String fileName = "temp.jpg";
+//                String imagePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString()+"/"+fileName;
+//                downloadFile(txturl.getText().toString(),imagePath);
+//                preview(imagePath);
+                else {
+//                    DownloadTask backGroundTask = new DownloadTask();
+//                    String[] urls = new String[1];
+//                    urls[0] = txturl.getText().toString();
+//                    backGroundTask.execute(urls);
+
+                    Thread backgroundThread = new Thread(new DownloadRunnable(txturl.getText().toString()));
+                    backgroundThread.start();
+                }
             }
         });
     }
@@ -69,11 +77,18 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (grantResults.length==2 && grantResults[0]==PackageManager.PERMISSION_GRANTED&& grantResults[1]==PackageManager.PERMISSION_GRANTED){
-            String fileName = "temp.jpg";
-            String imagePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString()+"/"+fileName;
-            downloadFile(txturl.getText().toString(),imagePath);
-            preview(imagePath);
+//            String fileName = "temp.jpg";
+//            String imagePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString()+"/"+fileName;
+//            downloadFile(txturl.getText().toString(),imagePath);
+//            preview(imagePath);
+//            DownloadTask backGroundTask = new DownloadTask();
+//            String[] urls = new String[1];
+//            urls[0] = txturl.getText().toString();
+//            backGroundTask.execute(urls);
+            Thread backgroundThread = new Thread(new DownloadRunnable(txturl.getText().toString()));
+            backgroundThread.start();
         }
+
         else {
             Toast.makeText(this,"External storage permission is not granted",Toast.LENGTH_SHORT).show();
         }
@@ -110,6 +125,85 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+
+
+    }
+    private Bitmap rescaleBitmap(String imagePath){
+        Bitmap image = BitmapFactory.decodeFile(imagePath);
+        float imageWith = image.getWidth();
+        float imageHeight = image.getHeight();
+        int rescaledWith = 480;
+        int rescaledHeight = (int) ((imageHeight* rescaledWith) / imageWith);
+        Bitmap bitmap = Bitmap.createScaledBitmap(image,rescaledWith, rescaledHeight,false);
+        imageView.setImageBitmap(bitmap);
+        return bitmap;
+    }
+    class DownloadTask extends AsyncTask<String,Integer,Bitmap>{
+        ProgressDialog progressDialog;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            progressDialog = new ProgressDialog(MainActivity.this);
+            progressDialog.setMax(100);
+            progressDialog.setIndeterminate(false);
+            progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            progressDialog.setTitle("Downloading");
+            progressDialog.setMessage("Please wait..");
+            progressDialog.show();
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            super.onProgressUpdate(values);
+            progressDialog.setProgress(values[0]);
+        }
+
+        @Override
+        protected Bitmap doInBackground(String... urls) {
+            String fileName = "temp.jpg";
+            String imagePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString()+"/"+fileName;
+            downloadFile(urls[0],imagePath+"/"+fileName);
+
+            return rescaleBitmap(imagePath+"/"+fileName);
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            imageView.setImageBitmap(bitmap);
+            progressDialog.dismiss();
+        }
+    }
+
+    class DownloadRunnable implements Runnable{
+        String url;
+
+        public DownloadRunnable(String url) {
+            this.url = url;
+        }
+
+        @Override
+        public void run() {
+            String fileName = "temp.jpg";
+            String imagePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString()+"/"+fileName;
+            downloadFile(url,imagePath+"/"+fileName);
+            Bitmap bitmap = rescaleBitmap(imagePath+"/"+fileName);
+
+            runOnUiThread(new UpdateBitmap(bitmap));
+        }
+
+        private class UpdateBitmap implements Runnable {
+            Bitmap bitmap;
+            public UpdateBitmap(Bitmap bitmap) {
+
+                this.bitmap = bitmap;
+            }
+
+            @Override
+            public void run() {
+
+            }
         }
     }
 }

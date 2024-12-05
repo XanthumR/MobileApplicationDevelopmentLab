@@ -73,24 +73,30 @@ public class MainActivity extends AppCompatActivity {
             }
             else {
                 Toast.makeText(MainActivity.this,"Player 2 wins",Toast.LENGTH_SHORT).show();
-                finish();
             }
         }
         public int gameEnded(int row,int col){
             int symbol=board[row][col];
             boolean win = true;
+            boolean win2 = true;
+            boolean win3 = true;
+            boolean win4 = true;
             for (int i=0;i<3;i++){
                 if (board[i][col]!=symbol){
                     win=false;
-                    return -1;
                 }
                 if (board[row][i]!=symbol){
-                    win=false;
-                    return -1;
+                    win2 =false;
                 }
-
+                if (board[i][i]!=symbol){
+                    win3 =false;
+                }
+                if (board[2-i][i]!=symbol){
+                    win4 =false;
+                }
             }
-            if (win){
+
+            if (win||win2||win3||win4){
                 return symbol;
             }
             return -1;
